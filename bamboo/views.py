@@ -65,6 +65,10 @@ def register_view():
     :return:
     """
     data = request.data
+    if data:
+        data = json.loads(data, encoding='utf-8')
+    else:
+        return JsonResponse(EMPTY_DATA, status=400)
     phone = data.get('phone')
     training_id = data.get('id')
     name = data.get('name')
@@ -81,15 +85,20 @@ def register_view():
     if not training:
         return JsonResponse(TRAINING_DOES_NOT_EXIST, status=404)
 
-    client = Client.query.filter_by(phone=phone).first()
+    client = db.session.query(Client).filter_by(phone=phone).first()
     if not client:
-        client = Client(phone=phone, name=name)
+        try:
+            client = Client(phone=phone, name=name)
+        except AssertionError as e:
+            return JsonResponse(str(e), status=400)
         db.session.add(client)
+        db.session.commit()
 
     if not training.coach_id and not coach_id:
         return JsonResponse(MISSING_COACH_ID, status=404)
 
-    if Register.query.filter(training_id=training_id, client_id=client.id).exists():
+    if db.session.query(Register.query.filter(Register.training_id == training_id,
+                                              Register.client_id == client.id).exists()).scalar():
         return JsonResponse(RECORD_ALREADY_EXIST, status=400)
 
     db.session.add(Register(client_id=client.id,
@@ -101,12 +110,12 @@ def register_view():
 
 @app.route('/ac')
 def ac():
-    db.session.add(Coach(first_name='Маша', last_name='Нех'))
-    db.session.add(Coach(first_name='Анастасия'))
-    db.session.add(Coach(first_name='Евгения'))
-    db.session.add(Coach(first_name='Анна'))
-    db.session.add(Coach(first_name='Кристина'))
-    db.session.add(Coach(first_name='Кристина', last_name='Шарм'))
+    db.session.add(Coach(first_name='Маша', last_name='Нех', color='#fcb5b5'))
+    db.session.add(Coach(first_name='Анастасия', color='#87bbc1'))
+    db.session.add(Coach(first_name='Евгения', color='#8777a3'))
+    db.session.add(Coach(first_name='Анна', color='#fffdba'))
+    db.session.add(Coach(first_name='Кристина', color='#d8b06e'))
+    db.session.add(Coach(first_name='Кристина', last_name='Шарм', color='#918284'))
     db.session.commit()
     return 'ok'
 
@@ -114,15 +123,18 @@ def ac():
 @app.route('/at')
 def gay():
     now_date = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
-    training_names = ['хуй', 'пизда', 'сковорода', 'джигурда']
+    training_names = ['POLEDANCE', 'ИДЕАЛЬНЫЙ ШПАГАТ', 'JAZZ FUNK', 'VOGUE']
     ids = [coach.id for coach in Coach.query.all()]
     ids.append(None)
     for i in range(7):
         for j in range(14):
-            db.session.add(Training(coach_id=ids[randint(0, len(ids) - 1)],
-                                    title=training_names[randint(0, len(training_names) - 1)],
+            coach_id = ids[randint(0, len(ids) - 1)]
+            title = training_names[randint(0, len(training_names) - 1)] if coach_id else 'ИНДИВИДУЛЬНОЕ ЗАНЯТИЕ'
+            db.session.add(Training(coach_id=coach_id,
+                                    title=title,
                                     start=now_date + timedelta(days=i, hours=j),
-                                    stop=now_date + timedelta(days=i, hours=j + 1)))
+                                    stop=now_date + timedelta(days=i, hours=j + 1),
+                                    hall=randint(0, 2)))
     db.session.commit()
     return 'ok'
 

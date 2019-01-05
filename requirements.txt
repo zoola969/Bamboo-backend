@@ -3,3 +3,5 @@ flask-sqlalchemy
 psycopg2
 sqlalchemy-migrate
 flask-admin
+pandas
+xlrd

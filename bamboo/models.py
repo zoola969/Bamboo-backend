@@ -6,17 +6,24 @@ from bamboo.extensions import db
 
 
 class Coach(db.Model):
+    DEFAULT_COLOR = '#ffffff'
+
     id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String(64))
     last_name = db.Column(db.String(64), default='')
     patronymic = db.Column(db.String(64), default='')
     description = db.Column(db.Text, nullable=True)
+    color = db.Column(db.String(8), default=DEFAULT_COLOR)
     trainings = db.relationship('Training', backref='coach')
     individual_trainings = db.relationship('Register', backref='coach')
 
     @property
     def short_name(self):
         return ' '.join([self.first_name, self.last_name])
+
+    @property
+    def training_color(self):
+        return self.color if self.color else self.DEFAULT_COLOR
 
     def __repr__(self):
         return ' '.join([self.last_name, self.first_name, self.patronymic])
@@ -30,16 +37,16 @@ class Coach(db.Model):
 
 class Training(db.Model):
     HALLS = (
-        ('small', 'Маленький зал'),
-        ('medium', 'Средний зал'),
-        ('big', 'Большой зал'),
+        (0, 'Маленький зал'),
+        (1, 'Средний зал'),
+        (2, 'Большой зал'),
     )
     id = db.Column(db.Integer, primary_key=True)
     coach_id = db.Column(db.Integer, db.ForeignKey('coach.id'), nullable=True)
     title = db.Column(db.String(64))
     start = db.Column(db.DateTime)
     stop = db.Column(db.DateTime)
-    hall = db.Column(db.String(32))
+    hall = db.Column(db.Integer(), default=0)
     registers = db.relationship('Register', backref='training')
 
     @property
@@ -55,6 +62,7 @@ class Training(db.Model):
             'id': self.id,
             'title': self.title,
             'coach': self.coach.short_name if self.coach else None,
+            'color': self.coach.training_color if self.coach else Coach.DEFAULT_COLOR,
             'hall': self.hall,
             'start': self.start_time,
             'stop': self.stop_time,
