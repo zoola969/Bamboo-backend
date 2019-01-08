@@ -2,13 +2,16 @@ import json
 from datetime import datetime, timedelta
 from random import randint
 
-from flask import request, Response
+from flask import request, Response, render_template, redirect, url_for, flash
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
+from flask_login import login_required, login_user
 
 from bamboo import app
-from bamboo.Trainings import Trainings
-from bamboo.models import Training, Coach, Register, Client
+from bamboo.trainings import Trainings
+from bamboo.admin import TrainingAdminView, CustomAdminIndexView, CoachAdminView
+from bamboo.forms import LoginForm
+from bamboo.models import Training, Coach, Register, Client, User
 from bamboo.extensions import db
 from bamboo.messages import *
 from bamboo.utils import JsonResponse
@@ -17,6 +20,21 @@ from bamboo.utils import JsonResponse
 @app.route('/')
 def hello_world():
     return 'Fuck you!'
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login_view():
+    form = LoginForm(request.form)
+    if request.method == 'POST':
+        if form.validate():
+            user = User.query.filter_by(username=form.username.data).first()
+            if user and user.check_password(form.password.data):
+                login_user(user)
+                next_url = request.args.get('next')
+                return redirect(next_url or url_for('admin.index'))
+            else:
+                flash('Неверный логин или пароль')
+    return render_template('login.html', form=form)
 
 
 @app.route('/au')
@@ -61,7 +79,10 @@ def schedule_view():
 @app.route('/register', methods=['POST'])
 def register_view():
     """
-    phone: +7XXXXXXXXXX
+    :param phone: +7XXXXXXXXXX <str>
+    :param id: <int>
+    :param name: <str>
+    :param coach_id: <int>
     :return:
     """
     data = request.data
@@ -110,12 +131,12 @@ def register_view():
 
 @app.route('/ac')
 def ac():
-    db.session.add(Coach(first_name='Маша', last_name='Нех', color='#fcb5b5'))
-    db.session.add(Coach(first_name='Анастасия', color='#87bbc1'))
-    db.session.add(Coach(first_name='Евгения', color='#8777a3'))
-    db.session.add(Coach(first_name='Анна', color='#fffdba'))
-    db.session.add(Coach(first_name='Кристина', color='#d8b06e'))
-    db.session.add(Coach(first_name='Кристина', last_name='Шарм', color='#918284'))
+    db.session.add(Coach(first_name='Маша', last_name='Нех'))
+    db.session.add(Coach(first_name='Анастасия'))
+    db.session.add(Coach(first_name='Евгения'))
+    db.session.add(Coach(first_name='Анна'))
+    db.session.add(Coach(first_name='Кристина'))
+    db.session.add(Coach(first_name='Кристина', last_name='Шарм'))
     db.session.commit()
     return 'ok'
 
@@ -123,23 +144,21 @@ def ac():
 @app.route('/at')
 def gay():
     now_date = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
-    training_names = ['POLEDANCE', 'ИДЕАЛЬНЫЙ ШПАГАТ', 'JAZZ FUNK', 'VOGUE']
+    training_names = ['Pole dance', 'Идеальный шпагат', 'Jazz Funk', 'Vogue']
     ids = [coach.id for coach in Coach.query.all()]
     ids.append(None)
     for i in range(7):
         for j in range(14):
             coach_id = ids[randint(0, len(ids) - 1)]
-            title = training_names[randint(0, len(training_names) - 1)] if coach_id else 'ИНДИВИДУЛЬНОЕ ЗАНЯТИЕ'
+            title = training_names[randint(0, len(training_names) - 1)] if coach_id else 'Индивидуальное занятие'
+            hall = Training.HALLS[randint(0, 2)][0]
+            level = Training.LEVELS[randint(0, 2)][0]
             db.session.add(Training(coach_id=coach_id,
                                     title=title,
                                     start=now_date + timedelta(days=i, hours=j),
                                     stop=now_date + timedelta(days=i, hours=j + 1),
-                                    hall=randint(0, 2)))
+                                    hall=hall,
+                                    level=level))
     db.session.commit()
     return 'ok'
 
-
-admin = Admin(app, name='microblog', template_mode='bootstrap3')
-admin.add_view(ModelView(Coach, db.session))
-admin.add_view(ModelView(Training, db.session))
-admin.add_view(ModelView(Register, db.session))

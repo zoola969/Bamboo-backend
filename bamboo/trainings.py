@@ -20,6 +20,12 @@ class Trainings(object):
         for training in self.trainings:
             i = training.start.day - self.now_date.day
             table[i]['trainings'].append(training.to_json())
+        empty_days = []
+        for i in range(len(table)):
+            if not table[i]['trainings']:
+                empty_days.append(i)
+        for i, index in enumerate(empty_days):
+            del table[index - i]
         return table
 
     def __set_data(self, i: int):

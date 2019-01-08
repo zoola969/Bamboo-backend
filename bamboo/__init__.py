@@ -2,6 +2,8 @@ import os
 import locale
 
 from flask import Flask
+from flask_login import LoginManager
+from flask_migrate import Migrate
 
 from bamboo.extensions import db
 
@@ -25,5 +27,12 @@ def create_app():
 
 
 app = create_app()
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login_view'
+
+migrate = Migrate(app, db)
+
 
 import bamboo.views, bamboo.models

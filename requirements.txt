@@ -1,7 +1,9 @@
 flask
 flask-sqlalchemy
+flask-admin
+flask-login
+flask-migrate
 psycopg2
 sqlalchemy-migrate
-flask-admin
 pandas
 xlrd

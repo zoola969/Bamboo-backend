@@ -1,8 +1,12 @@
 import json
+import sys
+from getpass import getpass
 
 from flask import Response
 
 from bamboo import app
+from bamboo.models import User
+from bamboo.extensions import db
 
 
 def is_allowed_file(filename):
@@ -30,3 +34,25 @@ class JsonResponse(Response):
         else:
             content = JsonResponse.__content_handler(str(content))
         return content
+
+
+def create_superuser():
+    with app.app_context():
+        if User.query.all():
+            print('A user already exists! Create another? (y/n):')
+            create = input()
+            if create == 'n':
+                sys.exit()
+
+        print('Enter username: ')
+        username = input()
+        password = getpass()
+        assert password == getpass('Password (again):')
+
+        user = User(
+            username=username,
+            password=password)
+        db.session.add(user)
+        db.session.commit()
+        print('User added.')
+        sys.exit()
