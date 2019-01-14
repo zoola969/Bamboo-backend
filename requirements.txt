@@ -5,5 +5,3 @@ flask-login
 flask-migrate
 psycopg2
 sqlalchemy-migrate
-pandas
-xlrd
